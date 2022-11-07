@@ -21,6 +21,9 @@ import com.google.android.gms.tasks.CancellationToken
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.gms.tasks.OnTokenCanceledListener
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -42,7 +45,7 @@ class HomeFragment : Fragment() {
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
+        savedInstanceState: Bundle?,
     ): View? {
         binding = FragmentHomeBinding.inflate(layoutInflater)
         return binding.root
@@ -124,8 +127,8 @@ class HomeFragment : Fragment() {
     private fun finishUpload(lat: Double, lon: Double) {
         val idd = UUID.randomUUID().toString()
         val data = LocationRuntimeData(idd, lat, lon, System.currentTimeMillis())
-        FirebaseDatabase.getInstance().getReference("Location/  ${dateString.toString()}/$id")
-            .child("locationRuntime").child(idd).setValue(data)
+        FirebaseDatabase.getInstance().getReference("Location/${dateString}/$id")
+            .child(idd).setValue(data)
         handler.removeCallbacks(runnable)
         binding.latitude.text = ""
         binding.longitude.text = ""
@@ -136,15 +139,26 @@ class HomeFragment : Fragment() {
     private fun uploadRuntime(lat: Double, lon: Double) {
         val idd = UUID.randomUUID().toString()
         val data = LocationRuntimeData(idd, lat, lon, System.currentTimeMillis())
-        FirebaseDatabase.getInstance().getReference("Location/${dateString.toString()}/$id")
-            .child("locationRuntime").child(idd).setValue(data)
+//        FirebaseDatabase.getInstance().getReference("Location/${dateString}/$id").child(idd)
+//            .setValue(data)
+        val db = Firebase.firestore
+        db.collection(dateString).document(id).update("locationRuntime", FieldValue.arrayUnion(data))
         codeRequest++
     }
 
     private fun uploadStart(lat: Double, lon: Double) {
         id = UUID.randomUUID().toString()
         val data = LocationData(id, dateString, dateLong, lat, lon, null)
-        FirebaseDatabase.getInstance().getReference("Location/$dateString").child(id).setValue(data)
+//        FirebaseDatabase.getInstance().getReference("Location/$dateString/$id").setValue(data)
+//            .addOnSuccessListener {
+//                codeRequest++
+//                Log.d("TAG", "uploadStart: Success")
+//            }
+//            .addOnFailureListener {
+//                Log.d("TAG", "uploadStart: Success")
+//            }
+        val db = Firebase.firestore
+        db.collection(dateString).document(id).set(data)
             .addOnSuccessListener {
                 codeRequest++
                 Log.d("TAG", "uploadStart: Success")
