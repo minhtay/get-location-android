@@ -129,8 +129,8 @@ class HomeFragment : Fragment() {
     private fun finishUpload(lat: Double, lon: Double) {
         val idd = UUID.randomUUID().toString()
         val data = LocationRuntimeData(idd, lat, lon, System.currentTimeMillis())
-        FirebaseDatabase.getInstance().getReference("Location/${dateString}/$id")
-            .child(idd).setValue(data)
+        val db = FirebaseFirestore.getInstance().collection("Location")
+        db.document(id).update("locationRuntime", FieldValue.arrayUnion(data))
         handler.removeCallbacks(runnable)
         binding.latitude.text = ""
         binding.longitude.text = ""
