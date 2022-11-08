@@ -1,6 +1,7 @@
 package com.example.myapp
 
 import android.content.Context
+import android.content.Intent
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.fragment.app.FragmentActivity
@@ -22,6 +23,12 @@ class AdapterHistory(private val activity: Context, private val arrayList: Array
     }
 
     override fun onBindViewHolder(holder: Viewholder, position: Int) {
+
+        holder.itemView.setOnClickListener {
+            val intent = Intent(activity,DetailHistoryActivity::class.java)
+            activity.startActivity(intent)
+        }
+
         var data: LocationData = arrayList[position]
 
         holder.binding.date.text = data.date
