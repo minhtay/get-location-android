@@ -22,6 +22,7 @@ import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.gms.tasks.OnTokenCanceledListener
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import java.text.SimpleDateFormat
@@ -79,6 +80,7 @@ class HomeFragment : Fragment() {
         }
     }
 
+    @SuppressLint("MissingPermission")
     private fun getLocation() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
         if (ActivityCompat.checkSelfPermission(
@@ -141,24 +143,16 @@ class HomeFragment : Fragment() {
         val data = LocationRuntimeData(idd, lat, lon, System.currentTimeMillis())
 //        FirebaseDatabase.getInstance().getReference("Location/${dateString}/$id").child(idd)
 //            .setValue(data)
-        val db = Firebase.firestore
-        db.collection(dateString).document(id).update("locationRuntime", FieldValue.arrayUnion(data))
+        val db = FirebaseFirestore.getInstance().collection("Location")
+        db.document(id).update("locationRuntime", FieldValue.arrayUnion(data))
         codeRequest++
     }
 
     private fun uploadStart(lat: Double, lon: Double) {
-        id = UUID.randomUUID().toString()
+        val db = FirebaseFirestore.getInstance().collection("Location")
+        id = db.document().id
         val data = LocationData(id, dateString, dateLong, lat, lon, null)
-//        FirebaseDatabase.getInstance().getReference("Location/$dateString/$id").setValue(data)
-//            .addOnSuccessListener {
-//                codeRequest++
-//                Log.d("TAG", "uploadStart: Success")
-//            }
-//            .addOnFailureListener {
-//                Log.d("TAG", "uploadStart: Success")
-//            }
-        val db = Firebase.firestore
-        db.collection(dateString).document(id).set(data)
+        db.document(id).set(data)
             .addOnSuccessListener {
                 codeRequest++
                 Log.d("TAG", "uploadStart: Success")
@@ -170,7 +164,7 @@ class HomeFragment : Fragment() {
 
     fun getTimeLocal() {
         dateLong = System.currentTimeMillis()
-        val dateFormat = SimpleDateFormat("yyyy-MMMM-dd", Locale.getDefault())
+        val dateFormat = SimpleDateFormat("yyyy-MMMM-dd")
         dateString = dateFormat.format(dateLong).toString()
         binding.date.text = dateString
     }
