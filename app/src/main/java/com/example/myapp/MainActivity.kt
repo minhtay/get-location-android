@@ -23,7 +23,6 @@ class MainActivity : AppCompatActivity() {
                 R.id.homeFragment, R.id.historyFragment
             )
         )
-        setupActionBarWithNavController(nav, appBarConfiguration)
         binding.bnvMain.setupWithNavController(nav)
     }
 }

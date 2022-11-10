@@ -1,8 +1,6 @@
 package com.example.myapp
 
-import android.Manifest
 import android.annotation.SuppressLint
-import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
 import android.os.Handler
@@ -10,8 +8,6 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
-import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
 import com.example.myapp.databinding.FragmentHomeBinding
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -20,13 +16,9 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.tasks.CancellationToken
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.gms.tasks.OnTokenCanceledListener
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
-import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.collections.ArrayList
 
 
 class HomeFragment : Fragment() {
@@ -36,12 +28,14 @@ class HomeFragment : Fragment() {
     lateinit var mFusedLocationClient: FusedLocationProviderClient
     private var codeBtn = 0
     private var codeRequest = 0
+    private var codeEvent = 0
     private lateinit var runnable: Runnable
     var ret: Long = 0
     private lateinit var dateString: String
     private var dateLong: Long = 0
     private lateinit var id: String
     private lateinit var handler: Handler
+    private var locationRequest: Location? = null
 
 
     override fun onCreateView(
@@ -57,42 +51,31 @@ class HomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
+        getCurrentLocation()
 
-        handler = Handler()
-        runnable = Runnable() {
-            getLocation()
-            handler.postDelayed(runnable, 10000)
-            binding.code.text = codeRequest.toString()
-        }
-
-        binding.button.setOnClickListener {
-            getTimeLocal()
-            if (codeBtn == 0) {
-                binding.button.setText(com.example.myapp.R.string.btn_stop)
-                codeBtn = 1
-                handler.post(runnable)
-                Log.d("TAG", "click: ")
-            } else {
-                binding.button.setText(com.example.myapp.R.string.btn_start)
-                codeBtn = 0
-                codeRequest = 0
-            }
+        binding.btnAction.setOnClickListener {
+            test()
         }
     }
 
+    private fun test() {
+        val id1 = UUID.randomUUID().toString()
+        val id2 = UUID.randomUUID().toString()
+        val data = LocationData(id1,"20-11-2022",2,2.0,2.0,null)
+        val arr = ArrayList<LocationData>()
+        arr.add(data)
+        val up = ReponseUpload(arr)
+
+        val ref = FirebaseFirestore.getInstance().collection("Location").document("2202")
+        ref.set(up)
+
+
+
+    }
+
     @SuppressLint("MissingPermission")
-    private fun getLocation() {
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
-        if (ActivityCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            return
-        }
+    private fun getCurrentLocation() {
         fusedLocationClient.getCurrentLocation(
             LocationRequest.PRIORITY_HIGH_ACCURACY,
             object : CancellationToken() {
@@ -102,72 +85,40 @@ class HomeFragment : Fragment() {
                 override fun isCancellationRequested() = false
             })
             .addOnSuccessListener { location: Location? ->
-                if (location == null)
-                    Toast.makeText(requireContext(), "Cannot get location.", Toast.LENGTH_SHORT)
-                        .show()
-                else {
-                    val lat = location.latitude
-                    val lon = location.longitude
-                    binding.latitude.text = lat.toString()
-                    binding.longitude.text = lon.toString()
-                    if (codeBtn == 1) {
-                        if (codeRequest == 0) {
-                            uploadStart(lat, lon)
-                        } else {
-                            uploadRuntime(lat, lon)
-                        }
-                    } else {
-                        finishUpload(lat, lon)
+                if (location != null) {
+                    locationRequest = location
+                    when (codeEvent) {
+                        0 -> defautLocation(location)
+                        1 -> startLocation(location)
+                        2 -> runtimeLocation(location)
+                        3 -> finishLocation(location)
                     }
                 }
-
             }
+        Log.d("TAG", "getLocation: ")
+    }
 
+    private fun defautLocation(location: Location) {
+        binding.data.text = "${location.latitude} : ${location.longitude}"
+        binding.data.visibility = View.VISIBLE
 
     }
 
-    private fun finishUpload(lat: Double, lon: Double) {
-        val idd = UUID.randomUUID().toString()
-        val data = LocationRuntimeData(idd, lat, lon, System.currentTimeMillis())
-        val db = FirebaseFirestore.getInstance().collection("Location")
-        db.document(id).update("locationRuntime", FieldValue.arrayUnion(data))
-        handler.removeCallbacks(runnable)
-        binding.latitude.text = ""
-        binding.longitude.text = ""
-        binding.code.text = ""
-        binding.date.text = ""
-    }
-
-    private fun uploadRuntime(lat: Double, lon: Double) {
-        val idd = UUID.randomUUID().toString()
-        val data = LocationRuntimeData(idd, lat, lon, System.currentTimeMillis())
-//        FirebaseDatabase.getInstance().getReference("Location/${dateString}/$id").child(idd)
-//            .setValue(data)
-        val db = FirebaseFirestore.getInstance().collection("Location")
-        db.document(id).update("locationRuntime", FieldValue.arrayUnion(data))
-        codeRequest++
-    }
-
-    private fun uploadStart(lat: Double, lon: Double) {
-        val db = FirebaseFirestore.getInstance().collection("Location")
-        id = db.document().id
-        val data = LocationData(id, dateString, dateLong, lat, lon, null)
-        db.document(id).set(data)
-            .addOnSuccessListener {
-                codeRequest++
-                Log.d("TAG", "uploadStart: Success")
+    private fun startLocation(location: Location) {
+        val ref = FirebaseFirestore.getInstance().collection("Test").document("Location")
+            .collection(dateString).get()
+        ref.addOnSuccessListener {
+            if (it.isEmpty) {
+            } else {
             }
-            .addOnFailureListener {
-                Log.d("TAG", "uploadStart: Failure")
-            }
+        }
     }
 
-    fun getTimeLocal() {
-        dateLong = System.currentTimeMillis()
-        val dateFormat = SimpleDateFormat("yyyy-MMMM-dd")
-        dateString = dateFormat.format(dateLong).toString()
-        binding.date.text = dateString
+    private fun runtimeLocation(location: Location) {
+        TODO("Not yet implemented")
     }
 
+    private fun finishLocation(location: Location) {
+
+    }
 }
-

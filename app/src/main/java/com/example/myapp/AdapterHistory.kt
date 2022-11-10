@@ -13,35 +13,42 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.ArrayList
 
-class AdapterHistory(private val activity: Context, private val arrayList: ArrayList<LocationData>) : RecyclerView.Adapter<Viewholder>() {
-    class Viewholder(val binding: ItemHistoryBinding) :RecyclerView.ViewHolder(binding.root)
+class AdapterHistory(
+    private val activity: Context,
+    private val arrayList: ArrayList<LocationData>,
+    private val onClick: (Any) -> Unit
+) : RecyclerView.Adapter<Viewholder>() {
+    class Viewholder(val binding: ItemHistoryBinding) : RecyclerView.ViewHolder(binding.root)
 
-    private lateinit var adapter : AdapterRuntime
+    private lateinit var adapter: AdapterRuntime
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Viewholder {
-       return Viewholder( ItemHistoryBinding.inflate(LayoutInflater.from(parent.context),parent,false))
+        return Viewholder(
+            ItemHistoryBinding.inflate(
+                LayoutInflater.from(parent.context),
+                parent,
+                false
+            )
+        )
     }
 
     override fun onBindViewHolder(holder: Viewholder, position: Int) {
 
-        holder.itemView.setOnClickListener {
-            val intent = Intent(activity,DetailHistoryActivity::class.java)
-            activity.startActivity(intent)
-        }
-
         var data: LocationData = arrayList[position]
+
+        holder.itemView.setOnClickListener{onClick(data)}
 
         holder.binding.date.text = data.date
         holder.binding.latitudeStart.text = data.latitudeStart.toString()
         holder.binding.longitudeStart.text = data.longitudeStart.toString()
         val dateFormat = SimpleDateFormat("yyyy-MMMM-dd", Locale.getDefault())
         //holder.binding.timeStar.text =  dateFormat.format(data.timeStar).toString()
-        holder.binding.timeStar.text =  data.timeStar.toString()
+        holder.binding.timeStar.text = data.timeStar.toString()
 
         var dataRuntime = ArrayList<LocationRuntimeData>()
         data.locationRuntime?.let { dataRuntime.addAll(it) }
 
-        adapter = AdapterRuntime(activity,dataRuntime)
+        adapter = AdapterRuntime(activity, dataRuntime)
         holder.binding.runtime.layoutManager =
             LinearLayoutManager(activity, LinearLayoutManager.VERTICAL, false)
         holder.binding.runtime.adapter = adapter
